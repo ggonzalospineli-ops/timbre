@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel del timbre</title>
+<meta name="theme-color" content="#0a1f44">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/icono-192.png">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body data-pagina="residente">
+
+<!-- =========================================================
+     PÁGINA DEL RESIDENTE — la abrís vos desde la notificación.
+     Misma idea que index.html: esqueleto funcional, sin diseño.
+     ========================================================= -->
+
+<main id="app">
+
+  <header class="cabecera">
+    <h1>Panel</h1>
+    <p id="estado-conexion" class="ayuda">Conectando…</p>
+  </header>
+
+  <!-- vista: a la espera -->
+  <section id="vista-espera" data-vista="escuchando">
+    <p>Escuchando el timbre.</p>
+    <p class="ayuda">
+      No hace falta dejar esta pantalla abierta: cuando toquen,
+      te llega la notificación de ntfy al celular.
+    </p>
+    <button type="button" data-accion="instalar" hidden>Instalar como app</button>
+    <p id="ultimo-motivo" class="ayuda"></p>
+  </section>
+
+  <!-- vista: están tocando -->
+  <section id="vista-entrante" data-vista="entrante" hidden>
+    <p id="texto-entrante">Alguien está en la puerta</p>
+    <div class="controles">
+      <button type="button" data-accion="atender">Atender</button>
+      <button type="button" data-accion="atender-audio">Solo audio</button>
+      <button type="button" data-accion="rechazar">Rechazar</button>
+    </div>
+  </section>
+
+  <!-- vista: llamada en curso -->
+  <section id="vista-llamada" data-vista="enLlamada" hidden>
+    <video id="video-remoto" autoplay playsinline></video>
+    <video id="video-local" autoplay playsinline muted></video>
+    <div class="controles">
+      <button type="button" data-accion="microfono">Silenciar</button>
+      <button type="button" data-accion="camara">Apagar cámara</button>
+      <button type="button" data-accion="colgar">Colgar</button>
+    </div>
+  </section>
+
+  <!-- vista: algo falló -->
+  <section id="vista-error" data-vista="error" hidden>
+    <p id="texto-error">Hubo un problema.</p>
+    <button type="button" data-accion="volver">Volver</button>
+  </section>
+
+</main>
+
+<script src="config.js"></script>
+<script src="js/ntfy.js"></script>
+<script src="js/rtc.js"></script>
+<script src="js/timbre.js"></script>
+<script src="js/ui-residente.js"></script>
+</body>
+</html>

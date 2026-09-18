@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador del QR de la placa</title>
+<link rel="stylesheet" href="estilos.css">
+<style>
+  #app { max-width: 720px; }
+  label { display: block; text-align: left; margin: 14px 0 4px; font-weight: 600; }
+  input { width: 100%; padding: 12px; border: 1px solid var(--borde); border-radius: 10px; font: inherit; }
+  #vista { background: #fff; border: 1px solid var(--borde); border-radius: 16px; padding: 20px; margin-top: 20px; }
+  #vista svg { width: 100%; max-width: 420px; height: auto; }
+  .nota { text-align: left; font-size: .9rem; color: var(--suave); line-height: 1.5; }
+</style>
+</head>
+<body>
+<main id="app">
+
+  <header class="cabecera">
+    <h1>QR para la placa</h1>
+    <p class="ayuda">Generá el archivo vectorial que le mandás al grabador.</p>
+  </header>
+
+  <label for="url">Dirección que va a abrir el QR</label>
+  <input id="url" type="url" placeholder="https://tuusuario.github.io/timbre/">
+
+  <label for="titulo">Texto de arriba</label>
+  <input id="titulo" type="text" value="TIMBRE">
+
+  <label for="pie">Texto de abajo</label>
+  <input id="pie" type="text" value="ESCANEÁ PARA LLAMAR">
+
+  <div class="controles">
+    <button type="button" id="descargar-placa">Descargar placa (SVG)</button>
+    <button type="button" id="descargar-qr">Descargar solo el QR (SVG)</button>
+  </div>
+
+  <div id="vista"><p class="ayuda">Escribí la dirección para ver la placa.</p></div>
+
+  <p class="nota">
+    <strong>Importante:</strong> esta dirección queda grabada en el metal para siempre.
+    Usá la de GitHub Pages y no borres nunca ese repositorio: el contenido lo podés
+    cambiar todas las veces que quieras, pero la dirección no.
+    <br><br>
+    El QR se genera con corrección de errores alta: sigue leyéndose aunque se raye
+    o se ensucie una parte. Para grabado en acero, mandá el SVG tal cual (es vectorial,
+    escala a cualquier tamaño). Un QR de 6&nbsp;cm de lado se lee sin problema desde
+    unos 40&nbsp;cm.
+  </p>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const vista = $('#vista');
+
+  /* Devuelve la matriz del QR con corrección de errores alta (H). */
+  function matriz(texto) {
+    let tipo = 0;                       // 0 = que elija el tamaño mínimo
+    const qr = qrcode(tipo, 'H');
+    qr.addData(texto);
+    qr.make();
+    const n = qr.getModuleCount();
+    const m = [];
+    for (let f = 0; f < n; f++) {
+      m[f] = [];
+      for (let c = 0; c < n; c++) m[f][c] = qr.isDark(f, c);
+    }
+    return m;
+  }
+
+  function svgDelQR(texto, lado, x0, y0, color) {
+    const m = matriz(texto);
+    const n = m.length;
+    const paso = lado / n;
+    let d = '';
+    for (let f = 0; f < n; f++) {
+      for (let c = 0; c < n; c++) {
+        if (!m[f][c]) continue;
+        /* +0.02 de solape: evita hairlines blancas al rasterizar o cortar */
+        d += 'M' + (x0 + c * paso) + ' ' + (y0 + f * paso) +
+             'h' + (paso + 0.02) + 'v' + (paso + 0.02) + 'h' + (-paso - 0.02) + 'Z';
+      }
+    }
+    return '<path d="' + d + '" fill="' + color + '"/>';
+  }
+
+  function armarPlaca(url, titulo, pie) {
+    const A = 300, LADO_QR = 200, X = (A - LADO_QR) / 2;
+    const ALTO = 380;
+    return [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + A + ' ' + ALTO + '" width="' + A + '" height="' + ALTO + '">',
+      '<rect width="' + A + '" height="' + ALTO + '" rx="16" fill="#ffffff"/>',
+      '<text x="' + (A/2) + '" y="52" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" ',
+      'font-size="30" font-weight="700" letter-spacing="2" fill="#0a1f44">',
+      escapar(titulo), '</text>',
+      '<rect x="' + (X - 10) + '" y="' + (78 - 10) + '" width="' + (LADO_QR + 20) + '" height="' + (LADO_QR + 20) + '" rx="10" fill="#ffffff"/>',
+      svgDelQR(url, LADO_QR, X, 78, '#0a1f44'),
+      '<text x="' + (A/2) + '" y="' + (78 + LADO_QR + 46) + '" text-anchor="middle" ',
+      'font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="600" ',
+      'letter-spacing="1.5" fill="#0a1f44">', escapar(pie), '</text>',
+      '</svg>'
+    ].join('');
+  }
+
+  function armarSoloQR(url) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">' +
+           '<rect width="200" height="200" fill="#ffffff"/>' +
+           svgDelQR(url, 200, 0, 0, '#000000') + '</svg>';
+  }
+
+  function escapar(t) {
+    return String(t).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  }
+
+  function refrescar() {
+    const url = $('#url').value.trim();
+    if (!url) {
+      vista.innerHTML = '<p class="ayuda">Escribí la dirección para ver la placa.</p>';
+      return null;
+    }
+    try {
+      const svg = armarPlaca(url, $('#titulo').value, $('#pie').value);
+      vista.innerHTML = svg;
+      return url;
+    } catch (e) {
+      vista.innerHTML = '<p class="ayuda">La dirección es demasiado larga para un QR. Acortala.</p>';
+      return null;
+    }
+  }
+
+  function bajar(nombre, svg) {
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  ['#url', '#titulo', '#pie'].forEach(s => $(s).addEventListener('input', refrescar));
+
+  $('#descargar-placa').addEventListener('click', function () {
+    const url = refrescar();
+    if (url) bajar('placa-timbre.svg', armarPlaca(url, $('#titulo').value, $('#pie').value));
+  });
+  $('#descargar-qr').addEventListener('click', function () {
+    const url = refrescar();
+    if (url) bajar('qr-timbre.svg', armarSoloQR(url));
+  });
+
+  /* arranca con la dirección de esta misma página, que suele ser la correcta */
+  $('#url').value = new URL('index.html', location.href).href.replace(/index\.html$/, '');
+  refrescar();
+})();
+</script>
+</body>
+</html>

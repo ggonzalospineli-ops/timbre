@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timbre</title>
+<meta name="theme-color" content="#0a1f44">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body data-pagina="visitante">
+
+<!-- =========================================================
+     PÁGINA DEL VISITANTE — esto es lo que abre el QR.
+     Estructura mínima y funcional, SIN diseño terminado.
+     La UI definitiva la reemplaza entera: lo único que importa
+     es conservar los id/data-accion que usa ui-visitante.js
+     (o reescribir ese archivo). Ver UI-CONTRATO.md
+     ========================================================= -->
+
+<main id="app">
+
+  <header class="cabecera">
+    <h1 id="nombre-casa">Timbre</h1>
+  </header>
+
+  <!-- vista: elegir a quién llamar -->
+  <section id="vista-inicio" data-vista="inicio">
+    <p class="ayuda">Tocá para llamar</p>
+    <div id="lista-destinos"></div>
+  </section>
+
+  <!-- vista: pidiendo cámara y micrófono -->
+  <section id="vista-permisos" data-vista="permisos" hidden>
+    <p>Permitile a tu navegador usar la cámara y el micrófono.</p>
+  </section>
+
+  <!-- vista: sonando -->
+  <section id="vista-llamando" data-vista="llamando" hidden>
+    <p id="texto-llamando">Llamando…</p>
+    <p class="ayuda">Esperá unos segundos.</p>
+    <button type="button" data-accion="colgar">Cancelar</button>
+  </section>
+
+  <!-- vista: llamada en curso -->
+  <section id="vista-llamada" data-vista="enLlamada" hidden>
+    <video id="video-remoto" autoplay playsinline></video>
+    <video id="video-local" autoplay playsinline muted></video>
+    <div class="controles">
+      <button type="button" data-accion="microfono">Silenciar</button>
+      <button type="button" data-accion="camara">Girar cámara</button>
+      <button type="button" data-accion="colgar">Colgar</button>
+    </div>
+  </section>
+
+  <!-- vista: nadie atendió -->
+  <section id="vista-sin-respuesta" data-vista="sinRespuesta" hidden>
+    <p>No atendió nadie.</p>
+    <button type="button" data-accion="aviso">Avisar que pasaste</button>
+    <button type="button" data-accion="reintentar">Llamar de nuevo</button>
+  </section>
+
+  <!-- vista: rechazada / terminada -->
+  <section id="vista-fin" data-vista="finalizada" hidden>
+    <p id="texto-fin">Llamada finalizada.</p>
+    <button type="button" data-accion="reintentar">Llamar de nuevo</button>
+  </section>
+
+  <!-- vista: algo falló -->
+  <section id="vista-error" data-vista="error" hidden>
+    <p id="texto-error">Hubo un problema.</p>
+    <button type="button" data-accion="reintentar">Reintentar</button>
+  </section>
+
+</main>
+
+<script src="config.js"></script>
+<script src="js/ntfy.js"></script>
+<script src="js/rtc.js"></script>
+<script src="js/timbre.js"></script>
+<script src="js/ui-visitante.js"></script>
+</body>
+</html>
