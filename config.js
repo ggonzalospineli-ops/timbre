@@ -6,7 +6,7 @@
 window.TIMBRE_CONFIG = {
 
   /* Nombre que ve el visitante al escanear el QR. */
-  casa: 'Casa',
+  casa: 'Casa Spinelli',
 
   /* Servidor de notificaciones. ntfy.sh es gratis y público.
      (Si algún día te armás tu propio ntfy, cambiás esta URL y listo.) */
