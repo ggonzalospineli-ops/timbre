@@ -53,15 +53,20 @@ window.TIMBRE_CONFIG = {
      Para cargar las coordenadas, abrí ubicacion.html PARADO EN TU
      CASA: te las mide y te da este bloque listo para pegar acá. */
   ubicacion: {
-    activa: false,          // ponelo en true cuando cargues lat y lon
-    lat: null,
-    lon: null,
-    radioMetros: 150,       // hasta acá se considera "en la puerta"
-    modo: 'bloquear',       // 'bloquear' = no deja llamar de lejos
-                            // 'avisar'   = deja llamar, pero te avisa en la notificación
-    segundosEspera: 15,     // cuánto esperar el GPS antes de rendirse
-    precisionMinimaAceptada: 1000,  // si el GPS falla por más de esto, no alcanza
-    dejarAvisoSiLejos: true // el de lejos igual puede dejarte un mensaje escrito
+    activa: true,
+    /* Billinghurst 1292, CABA — redondeado a 3 decimales: lo que queda
+       publicado es la manzana, no la puerta (se corre unos 37 m).
+       Está en 'avisar' y no en 'bloquear' hasta confirmar el punto:
+       el código postal que figura en el mapa para esta altura (1186)
+       no coincide con el que dio el dueño (1174), y el tramo de
+       Billinghurst con ese CP está a 704 m de acá. */
+    lat: -34.595,
+    lon: -58.414,
+    radioMetros: 200,
+    modo: 'avisar',
+    segundosEspera: 15,
+    precisionMinimaAceptada: 1000,
+    dejarAvisoSiLejos: true
   },
 
   /* Textos que aparecen en la notificación del celular */
