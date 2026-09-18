@@ -1,9 +1,9 @@
 /* Service worker: solo cachea la cáscara para que el panel abra rápido
    y funcione aunque la red esté lenta. Las llamadas siempre necesitan red. */
-const CACHE = 'timbreqr-v1';
+const CACHE = 'timbreqr-v2';
 const ARCHIVOS = [
   './', './index.html', './panel.html', './estilos.css', './config.js',
-  './js/ntfy.js', './js/rtc.js', './js/timbre.js',
+  './js/ntfy.js', './js/rtc.js', './js/geo.js', './js/timbre.js',
   './js/ui-visitante.js', './js/ui-residente.js',
   './iconos/icono-192.png', './iconos/icono-512.png'
 ];

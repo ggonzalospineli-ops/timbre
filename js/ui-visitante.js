@@ -11,6 +11,11 @@
     $('#anuncio').textContent = titulo.textContent;
     titulo.focus({ preventScroll: true });
   }
+  function enPalabras(metros) {
+    if (metros == null) return 'una distancia que no pudimos medir';
+    return metros < 1000 ? metros + ' metros'
+         : String(Math.round(metros / 100) / 10).replace('.', ',') + ' km';
+  }
   function microfono(activo) {
     silenciado = !activo;
     const b = $('[data-accion="microfono"]');
@@ -52,6 +57,11 @@
     try {
       if (a === 'colgar') timbre.colgar();
       if (a === 'inicio') mostrar('inicio');
+      if (a === 'ir-aviso') {
+        $('[data-vista="sinRespuesta"] h1').textContent = 'Dejales un mensaje.';
+        $('[data-vista="sinRespuesta"] .bajada').textContent = 'Van a recibirlo en el celular aunque no puedas llamar.';
+        mostrar('sinRespuesta');
+      }
       if (a === 'reintentar') { const d = timbre.destinoActual() || destinos[0]; if (d) await llamar(d.id); }
       if (a === 'microfono') timbre.silenciarMicrofono(!silenciado);
       if (a === 'reproducir') reproducir();
@@ -67,11 +77,36 @@
     } catch (_) { b.disabled = false; $('#mensaje-accion').textContent = 'No pudimos completar esa acción. Probá de nuevo.'; }
   });
   timbre.on('estado', e => {
-    ocupada = ['permisos', 'llamando', 'enLlamada'].includes(e.estado);
+    ocupada = ['ubicando', 'permisos', 'llamando', 'enLlamada'].includes(e.estado);
     mostrar(e.estado === 'rechazada' ? 'finalizada' : e.estado);
     if (!ocupada) { local.srcObject = null; remoto.srcObject = null; $('[data-accion="reproducir"]').hidden = true; }
     if (e.estado === 'llamando') $('#texto-llamando').textContent = destinos.length > 1 && e.destino ? 'Llamando a ' + e.destino.nombre + '…' : 'Esperando que atiendan…';
     if (e.estado === 'enLlamada' && remoto.srcObject) reproducir();
+    /* el rótulo del encabezado no puede afirmar que está en la puerta
+       justo en las pantallas donde eso está en duda */
+    $('#etiqueta-cabecera').textContent =
+      e.estado === 'ubicando' ? 'VERIFICANDO' :
+      e.estado === 'lejos'    ? 'FUERA DE ZONA' : 'ESTÁS EN LA PUERTA';
+
+    if (e.estado === 'sinRespuesta') {
+      /* puede venir con los textos cambiados desde la pantalla de "lejos" */
+      $('[data-vista="sinRespuesta"] h1').textContent = 'No atendió nadie.';
+      $('[data-vista="sinRespuesta"] .bajada').textContent = 'Quizás no llegaron a tiempo. Podés avisar que pasaste.';
+    }
+    if (e.estado === 'lejos') {
+      const u = e.ubicacion || {};
+      const lejos = { lejos: 'Estás a ' + enPalabras(u.distancia) + ' de la casa.',
+                      impreciso: 'No pudimos ubicarte con precisión suficiente.',
+                      sinPermiso: 'Necesitamos tu ubicación para abrir el timbre.',
+                      sinSenal: 'No pudimos obtener tu ubicación.',
+                      sinSoporte: 'Tu navegador no puede compartir la ubicación.' };
+      $('#texto-lejos').textContent = lejos[u.estado] || 'No pudimos confirmar que estés en la puerta.';
+      $('#detalle-lejos').textContent = (u.estado === 'sinPermiso')
+        ? 'Habilitá la ubicación para este sitio, junto a la dirección del navegador, y reintentá.'
+        : (u.estado === 'impreciso' || u.estado === 'sinSenal')
+          ? 'Salí al aire libre o esperá unos segundos: bajo techo el GPS falla.'
+          : 'Si estás en la puerta, esperá unos segundos y reintentá.';
+    }
     if (e.estado === 'rechazada') {
       $('[data-vista="finalizada"] h1').textContent = 'Ahora no pueden atender.';
       $('#texto-fin').textContent = 'Podés volver a intentar más tarde.';

@@ -99,6 +99,57 @@ inicio**. Queda como una app y abre al instante.
 
 ---
 
+## Verificación de ubicación (anti-trolls)
+
+El timbre puede exigir que quien toca **esté realmente en la puerta**. Sirve
+contra el que escanea una vez, se guarda el link y después toca desde lejos.
+
+### Cómo activarla
+
+1. Abrí **`ubicacion.html` con el celular, parado en la puerta de tu casa**.
+2. Tocá "Medir mi ubicación" y esperá a que la precisión sea buena (menos de
+   60 metros; al aire libre suele dar menos de 20).
+3. Copiá el bloque que te arma y pegalo en `config.js`, reemplazando el
+   `ubicacion` que ya está.
+4. `git add -A && git commit -m "ubicación" && git push`.
+
+Para probar: abrí esa misma página desde otro lado y tocá "Medir de nuevo".
+Te dice a qué distancia estás y si el timbre te dejaría llamar.
+
+### Qué pasa con cada caso
+
+| Situación del visitante | Qué pasa |
+|---|---|
+| Está en la puerta | Llama normalmente. La notificación te dice a cuántos metros está. |
+| Está lejos | No puede llamar. Puede dejarte un mensaje escrito. |
+| El GPS no da precisión suficiente | No puede llamar (si no, alcanzaría con una ubicación por IP para pasar). |
+| No da permiso de ubicación | No puede llamar. |
+
+Con `modo: 'avisar'` en vez de `'bloquear'`, la llamada entra igual pero la
+notificación te llega marcada con ⚠️ y la distancia, y decidís vos.
+
+### Hasta dónde protege, de verdad
+
+Esta verificación corre en el navegador del visitante, así que **no es a prueba
+de balas**: quien sepa usar las herramientas de desarrollo o una app de GPS
+falso puede saltearla. No hay forma de evitarlo sin un servidor propio.
+
+Lo que sí hace, y es lo que importa en una casa: frena por completo al troll
+casual, que es el caso real. Y además te da información útil en cada timbrazo
+("en la puerta, a 8 m").
+
+### La contra: publica dónde vivís
+
+Para comparar distancias, el navegador del visitante necesita saber dónde está
+la casa, así que **las coordenadas quedan en el código, que es público**.
+
+Si te incomoda, en `ubicacion.html` marcá **"redondear las coordenadas"**: se
+guarda el centro de la manzana en vez de la puerta (hasta ~80 m de corrimiento)
+y el radio sube a 200 m para compensar. Seguís filtrando al que toca desde otro
+barrio, sin publicar tu puerta exacta.
+
+---
+
 ## Lo que cuesta y lo que no
 
 | | |
@@ -198,6 +249,7 @@ La lógica está cubierta por pruebas que corren sin navegador ni servidor
 node pruebas/flujo.js       # timbrazo -> atender -> hablar -> colgar
 node pruebas/bordes.js      # rechazo, dos celulares a la vez, aviso, cierre de panel
 node pruebas/camara.js      # girar la cámara sin abrir otro micrófono
+node pruebas/ubicacion.js   # verificación de ubicación y cálculo de distancia
 node pruebas/senales.js     # el SDP entra en el límite de 4 KB de ntfy
 node pruebas/peor-caso.js   # partido en trozos y rearmado desordenado
 ```
@@ -211,9 +263,11 @@ config.js              lo único que editás vos
 index.html             pantalla del visitante (la abre el QR)
 panel.html             pantalla del residente (la abrís vos)
 qr.html                generador del SVG de la placa
+ubicacion.html         mide las coordenadas de tu casa para activar el filtro
 estilos.css            provisorio, se reemplaza al diseñar
 js/ntfy.js             transporte: push + señalización comprimida
 js/rtc.js              WebRTC: conexión, STUN/TURN, cámara y micrófono
+js/geo.js              verificación de que el visitante esté en la puerta
 js/timbre.js           la lógica: estados de la llamada
 js/ui-visitante.js     pegamento con la pantalla (descartable)
 js/ui-residente.js     pegamento con la pantalla (descartable)

@@ -9,6 +9,7 @@
 
   const Ntfy = global.TimbreNtfy;
   const RTC  = global.TimbreRTC;
+  const Geo  = global.TimbreGeo;
   const cfg  = () => global.TIMBRE_CONFIG;
 
   /* ---------- mini emisor de eventos ---------- */
@@ -32,6 +33,12 @@
     return obj;
   }
 
+  function enPalabras(metros) {
+    if (metros == null) return '';
+    return metros < 1000 ? metros + ' m'
+         : (Math.round(metros / 100) / 10).toString().replace('.', ',') + ' km';
+  }
+
   function buscarDestino(id) {
     const ds = cfg().destinos;
     return ds.find(d => d.id === id) || ds[0];
@@ -48,6 +55,7 @@
     let pc = null, local = null, remoto = null;
     let canal = null, llamadaId = null, destino = null;
     let camara = 'user';
+    let ubicacion = { estado: 'apagada' };
     let relojSinRespuesta = null, relojMaximo = null;
 
     function ir(nuevo, extra) {
@@ -73,12 +81,25 @@
     yo.estado = estado;
     yo.llamadaActual = () => llamadaId;
     yo.destinoActual = () => destino;
+    yo.ubicacion = () => ubicacion;
 
     /* --- tocar el timbre --- */
     yo.tocar = async function (destinoId) {
       if (estado === 'llamando' || estado === 'enLlamada') return;
       destino = buscarDestino(destinoId);
       llamadaId = Ntfy.uid(8);
+
+      /* ¿está en la puerta? Se pregunta antes que nada: no tiene
+         sentido pedirle la cámara a alguien que no va a poder llamar. */
+      ubicacion = { estado: 'apagada' };
+      if (Geo && cfg().ubicacion && cfg().ubicacion.activa) {
+        ir('ubicando', { destino: destino });
+        ubicacion = await Geo.verificar();
+        if (!Geo.habilita(ubicacion)) {
+          ir('lejos', { destino: destino, ubicacion: ubicacion });
+          return;
+        }
+      }
 
       try {
         ir('permisos', { destino: destino });
@@ -119,9 +140,18 @@
         'panel.html?c=' + llamadaId + '&d=' + destino.id, location.href
       ).href;
       try {
+        let detalle = '';
+        if (ubicacion.estado === 'cerca') {
+          detalle = ' · en la puerta (a ' + enPalabras(ubicacion.distancia) + ')';
+        } else if (ubicacion.estado === 'lejos') {
+          detalle = ' · ⚠️ a ' + enPalabras(ubicacion.distancia) + ' de casa';
+        } else if (ubicacion.estado && ubicacion.estado !== 'apagada') {
+          detalle = ' · ⚠️ sin ubicación confirmada';
+        }
+
         await Ntfy.publicar(destino.topic, {
           title: cfg().textos.tituloPush,
-          message: cfg().textos.cuerpoPush + ' — ' + destino.nombre,
+          message: cfg().textos.cuerpoPush + ' — ' + destino.nombre + detalle,
           priority: 5,
           tags: ['bell'],
           click: urlPanel,

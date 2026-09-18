@@ -11,6 +11,7 @@ saber nada de eso.
 | `index.html` | `js/timbre.js` |
 | `panel.html` | `js/rtc.js` |
 | `estilos.css` | `js/ntfy.js` |
+| | `js/geo.js` |
 | `js/ui-visitante.js` | `config.js` (solo lo edita el dueño de casa) |
 | `js/ui-residente.js` | |
 
@@ -23,6 +24,7 @@ Lo único que hay que respetar es el orden de carga de los scripts:
 <script src="config.js"></script>
 <script src="js/ntfy.js"></script>
 <script src="js/rtc.js"></script>
+<script src="js/geo.js"></script>
 <script src="js/timbre.js"></script>
 <script src="js/mi-ui.js"></script>   <!-- lo tuyo -->
 ```
@@ -87,10 +89,12 @@ timbre.on('error', (err) => {});
 | `e.estado` | Qué mostrar |
 |---|---|
 | `inicio` | El botón (o la lista de destinos). |
+| `ubicando` | Comprobando que esté en la puerta. Dura 1–15 s. Solo aparece si la verificación de ubicación está activa. |
 | `permisos` | "Permití cámara y micrófono". Dura 1–3 s. |
 | `llamando` | Llamando. Es el momento más largo (hasta 45 s): merece animación y un botón de cancelar. |
 | `enLlamada` | Video en vivo + controles. |
 | `sinRespuesta` | Nadie atendió. Ofrecer "dejar aviso" y "llamar de nuevo". |
+| `lejos` | No se pudo confirmar que esté en la puerta, así que no puede llamar. `e.ubicacion.estado` dice por qué: `lejos` (con `e.ubicacion.distancia` en metros), `impreciso`, `sinPermiso`, `sinSenal` o `sinSoporte`. Ofrecer reintentar y dejar un mensaje escrito. |
 | `rechazada` | No pueden atender ahora. |
 | `finalizada` | Terminó. `e.motivo`: `cortasteVos`, `cortaronDelOtroLado`, `conexionPerdida`, `tiempo`. |
 | `error` | `e.motivo`: `permisos`, `sinRed`, `webrtc`. |
@@ -147,6 +151,24 @@ panel.on('error', (e) => {});
 `conexionPerdida`, `tiempo`.
 
 ---
+
+## Verificación de ubicación
+
+Si está activa en `config.js`, el motor le pide la ubicación al visitante
+**antes** de pedirle la cámara, y puede cortar el flujo con el estado `lejos`.
+La UI no hace nada de esto: solo dibuja los dos estados nuevos.
+
+`timbre.ubicacion()` devuelve el último resultado: `{ estado, distancia, precision }`.
+
+Tres cosas a tener en cuenta al diseñar:
+
+- **`ubicando` puede durar hasta 15 segundos.** Bajo techo el primer fix del GPS
+  tarda. Merece una animación, no un cartel quieto.
+- **`lejos` no siempre es un troll.** Puede ser un visitante real con mal GPS o
+  que negó el permiso sin querer. El tono no debería acusar, y siempre tiene que
+  quedar una salida: reintentar, o dejar un mensaje escrito.
+- **El rótulo del encabezado no puede afirmar lo que está en duda.** En `ubicando`
+  y `lejos` no corresponde decir "estás en la puerta".
 
 ## Detalles que la UI tiene que resolver
 

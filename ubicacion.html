@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubicación de la casa</title>
+<link rel="stylesheet" href="estilos.css">
+<style>
+  #app { max-width: 620px; margin: 0 auto; padding: 16px; }
+  .caja { background: #fff; border: 1px solid rgba(0,0,0,.12); border-radius: 16px; padding: 18px; margin: 16px 0; text-align: left; }
+  .dato { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+  .dato:last-child { border: 0; }
+  .dato b { font-variant-numeric: tabular-nums; }
+  pre { background: #0f1b2d; color: #e6edf6; padding: 14px; border-radius: 12px; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+  .semaforo { font-weight: 700; padding: 10px 14px; border-radius: 10px; display: inline-block; }
+  .bien { background: #dcfce7; color: #166534; }
+  .regular { background: #fef9c3; color: #854d0e; }
+  .mal { background: #fee2e2; color: #991b1b; }
+  label { display: block; margin: 14px 0 4px; font-weight: 600; }
+  input[type=number] { width: 100%; padding: 11px; border: 1px solid rgba(0,0,0,.2); border-radius: 10px; font: inherit; }
+  .fila { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
+  .nota { font-size: .88rem; line-height: 1.55; opacity: .8; text-align: left; }
+</style>
+</head>
+<body>
+<main id="app">
+
+  <header class="cabecera">
+    <h1>Ubicación de la casa</h1>
+    <p class="ayuda">Abrí esta página <strong>parado en la puerta de tu casa</strong>.</p>
+  </header>
+
+  <div class="controles">
+    <button type="button" id="medir" class="primario">Medir mi ubicación</button>
+    <button type="button" id="remedir" hidden>Medir de nuevo</button>
+  </div>
+
+  <div id="estado" class="caja" hidden></div>
+
+  <div id="resultado" hidden>
+
+    <label for="radio">Radio: hasta qué distancia se considera "en la puerta"</label>
+    <div class="fila">
+      <input id="radio" type="number" min="20" max="2000" step="10" value="150">
+      <span>metros</span>
+    </div>
+
+    <label>
+      <input type="checkbox" id="redondear">
+      Redondear las coordenadas (más privacidad, menos precisión)
+    </label>
+    <p class="nota" id="nota-redondeo"></p>
+
+    <p class="ayuda" style="text-align:left"><strong>Pegá esto en <code>config.js</code>, reemplazando el bloque <code>ubicacion</code>:</strong></p>
+    <pre id="bloque"></pre>
+    <div class="controles">
+      <button type="button" id="copiar" class="primario">Copiar</button>
+    </div>
+
+    <div class="caja">
+      <p class="ayuda" style="text-align:left"><strong>Probar desde otro lado:</strong> volvé a abrir esta página desde donde quieras y tocá "Medir de nuevo": te dice a qué distancia estás del punto guardado y si el timbre te dejaría llamar.</p>
+      <div id="prueba"></div>
+    </div>
+  </div>
+
+  <p class="nota">
+    <strong>Cómo tomar una buena medición:</strong> hacelo con el celular, al aire
+    libre y con el GPS activado. Bajo techo la precisión empeora mucho.
+    Si la medición te da más de 50 metros de error, esperá unos segundos y repetila:
+    el GPS mejora solo a medida que engancha satélites.
+    <br><br>
+    <strong>Sobre la privacidad:</strong> estas coordenadas van a quedar en el
+    código de la página, que es público. Cualquiera que mire el código va a poder
+    ver dónde está la casa. Si te incomoda, marcá "redondear": se guarda el centro
+    de la manzana en vez de la puerta, y se compensa con un radio más grande.
+  </p>
+
+</main>
+
+<script src="config.js"></script>
+<script src="js/geo.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  let medida = null;
+
+  function formato(m) {
+    return m < 1000 ? Math.round(m) + ' m'
+                    : (Math.round(m / 100) / 10).toString().replace('.', ',') + ' km';
+  }
+
+  function calidad(precision) {
+    if (precision <= 20) return ['bien', 'Excelente', 'Podés usar un radio chico, de 60 a 100 metros.'];
+    if (precision <= 60) return ['bien', 'Buena', 'Un radio de 150 metros va a andar bien.'];
+    if (precision <= 200) return ['regular', 'Regular', 'Conviene repetir la medición al aire libre, o usar un radio de 300 metros.'];
+    return ['mal', 'Mala', 'No uses esta medición: está tomada por red o por IP, no por GPS. Probá con el celular, afuera.'];
+  }
+
+  function mostrarEstado(html, clase) {
+    const caja = $('#estado');
+    caja.hidden = false;
+    caja.innerHTML = html;
+    caja.className = 'caja' + (clase ? ' ' + clase : '');
+  }
+
+  function bloque() {
+    if (!medida) return '';
+    const redondear = $('#redondear').checked;
+    const dec = redondear ? 3 : 6;
+    const lat = Number(medida.lat.toFixed(dec));
+    const lon = Number(medida.lon.toFixed(dec));
+    let radio = Number($('#radio').value) || 150;
+    if (redondear) radio = Math.max(radio, 200);   // el redondeo mete hasta ~80 m de corrimiento
+    return [
+      '  ubicacion: {',
+      '    activa: true,',
+      '    lat: ' + lat + ',',
+      '    lon: ' + lon + ',',
+      '    radioMetros: ' + radio + ',',
+      "    modo: 'bloquear',",
+      '    segundosEspera: 15,',
+      '    precisionMinimaAceptada: 1000,',
+      '    dejarAvisoSiLejos: true',
+      '  },'
+    ].join('\n');
+  }
+
+  function refrescar() {
+    $('#bloque').textContent = bloque();
+    const r = $('#redondear').checked;
+    $('#nota-redondeo').textContent = r
+      ? 'Se guardan 3 decimales: se publica la manzana, no la puerta (hasta ~80 m de corrimiento). El radio sube a 200 m como mínimo para compensar.'
+      : 'Se guardan las coordenadas exactas, con precisión de centímetros.';
+  }
+
+  function compararConLoGuardado(pos) {
+    const u = (window.TIMBRE_CONFIG || {}).ubicacion;
+    const caja = $('#prueba');
+    if (!u || typeof u.lat !== 'number') {
+      caja.innerHTML = '<p class="ayuda">Todavía no hay un punto guardado en <code>config.js</code>. Pegá el bloque de arriba y recargá esta página para poder probar.</p>';
+      return;
+    }
+    const d = TimbreGeo.distancia(u.lat, u.lon, pos.lat, pos.lon);
+    const entra = (d - pos.precision) <= u.radioMetros;
+    caja.innerHTML =
+      '<div class="dato"><span>Distancia al punto guardado</span><b>' + formato(d) + '</b></div>' +
+      '<div class="dato"><span>Radio configurado</span><b>' + u.radioMetros + ' m</b></div>' +
+      '<div class="dato"><span>¿El timbre te dejaría llamar?</span><b>' + (entra ? 'Sí' : 'No') + '</b></div>';
+  }
+
+  async function medir() {
+    mostrarEstado('<p>Buscando el GPS… puede tardar unos segundos.</p>');
+    $('#medir').disabled = true;
+    try {
+      const pos = await TimbreGeo.posicionActual(20000);
+      medida = pos;
+      const [clase, titulo, consejo] = calidad(pos.precision);
+      mostrarEstado(
+        '<div class="dato"><span>Latitud</span><b>' + pos.lat.toFixed(6) + '</b></div>' +
+        '<div class="dato"><span>Longitud</span><b>' + pos.lon.toFixed(6) + '</b></div>' +
+        '<div class="dato"><span>Margen de error</span><b>± ' + Math.round(pos.precision) + ' m</b></div>' +
+        '<p style="margin-top:12px"><span class="semaforo ' + clase + '">Precisión: ' + titulo + '</span></p>' +
+        '<p class="nota" style="margin-top:8px">' + consejo + '</p>'
+      );
+      $('#resultado').hidden = false;
+      $('#remedir').hidden = false;
+      $('#medir').textContent = 'Medir mi ubicación';
+      if (pos.precision > 60) $('#radio').value = pos.precision > 200 ? 300 : 150;
+      refrescar();
+      compararConLoGuardado(pos);
+    } catch (e) {
+      const porQue = (e && e.code === 1)
+        ? 'No diste permiso de ubicación. Habilitalo para este sitio y probá de nuevo.'
+        : 'No se pudo obtener la ubicación. Probá al aire libre, con el GPS encendido.';
+      mostrarEstado('<p><span class="semaforo mal">Sin ubicación</span></p><p class="nota" style="margin-top:8px">' + porQue + '</p>');
+    } finally {
+      $('#medir').disabled = false;
+    }
+  }
+
+  $('#medir').addEventListener('click', medir);
+  $('#remedir').addEventListener('click', medir);
+  $('#radio').addEventListener('input', refrescar);
+  $('#redondear').addEventListener('change', refrescar);
+  $('#copiar').addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(bloque());
+      this.textContent = 'Copiado ✓';
+      setTimeout(() => { this.textContent = 'Copiar'; }, 2000);
+    } catch (_) {
+      this.textContent = 'Seleccionalo y copialo a mano';
+    }
+  });
+})();
+</script>
+</body>
+</html>

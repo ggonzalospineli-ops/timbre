@@ -46,6 +46,24 @@ window.TIMBRE_CONFIG = {
     segundosMaxLlamada: 300   // corta sola a los 5 min
   },
 
+  /* Verificación de ubicación: solo puede tocar el timbre quien
+     está realmente en la puerta. Frena al que guarda el link y
+     toca desde lejos.
+
+     Para cargar las coordenadas, abrí ubicacion.html PARADO EN TU
+     CASA: te las mide y te da este bloque listo para pegar acá. */
+  ubicacion: {
+    activa: false,          // ponelo en true cuando cargues lat y lon
+    lat: null,
+    lon: null,
+    radioMetros: 150,       // hasta acá se considera "en la puerta"
+    modo: 'bloquear',       // 'bloquear' = no deja llamar de lejos
+                            // 'avisar'   = deja llamar, pero te avisa en la notificación
+    segundosEspera: 15,     // cuánto esperar el GPS antes de rendirse
+    precisionMinimaAceptada: 1000,  // si el GPS falla por más de esto, no alcanza
+    dejarAvisoSiLejos: true // el de lejos igual puede dejarte un mensaje escrito
+  },
+
   /* Textos que aparecen en la notificación del celular */
   textos: {
     tituloPush: '🔔 Timbre',
