@@ -54,16 +54,14 @@ window.TIMBRE_CONFIG = {
      CASA: te las mide y te da este bloque listo para pegar acá. */
   ubicacion: {
     activa: true,
-    /* Billinghurst 1292, CABA — redondeado a 3 decimales: lo que queda
-       publicado es la manzana, no la puerta (se corre unos 37 m).
-       Está en 'avisar' y no en 'bloquear' hasta confirmar el punto:
-       el código postal que figura en el mapa para esta altura (1186)
-       no coincide con el que dio el dueño (1174), y el tramo de
-       Billinghurst con ese CP está a 704 m de acá. */
+    /* Billinghurst 1292, CABA (confirmado por el dueño).
+       Redondeado a 3 decimales: lo que queda publicado es la manzana
+       y no la puerta. El redondeo corre el punto unos 37 m, que el
+       radio de 200 m absorbe de sobra. */
     lat: -34.595,
     lon: -58.414,
     radioMetros: 200,
-    modo: 'avisar',
+    modo: 'bloquear',
     segundosEspera: 15,
     precisionMinimaAceptada: 1000,
     dejarAvisoSiLejos: true
