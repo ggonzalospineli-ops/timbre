@@ -56,7 +56,8 @@
     let canal = null, llamadaId = null, destino = null;
     let camara = 'user';
     let ubicacion = { estado: 'apagada' };
-    let relojSinRespuesta = null, relojMaximo = null;
+    let foto = null;
+    let relojSinRespuesta = null, relojMaximo = null, relojReintento = null;
 
     function ir(nuevo, extra) {
       estado = nuevo;
@@ -67,6 +68,7 @@
     function limpiarRelojes() {
       clearTimeout(relojSinRespuesta); relojSinRespuesta = null;
       clearTimeout(relojMaximo); relojMaximo = null;
+      clearTimeout(relojReintento); relojReintento = null;
     }
 
     function desarmar() {
@@ -91,6 +93,7 @@
 
       /* ¿está en la puerta? Se pregunta antes que nada: no tiene
          sentido pedirle la cámara a alguien que no va a poder llamar. */
+      foto = null;
       ubicacion = { estado: 'apagada' };
       if (Geo && cfg().ubicacion && cfg().ubicacion.activa) {
         ir('ubicando', { destino: destino });
@@ -190,12 +193,56 @@
         yo.emitir('error', e); return;
       }
 
+      /* La foto se saca ahora, con la cámara ya entregando imagen, y se
+         guarda por si no atienden. Sacarla más tarde no serviría: para
+         entonces los medios ya están cortados.                        */
+      if (cfg().llamada.fotoSiNoAtienden) {
+        RTC.capturarFoto(local, 0.7).then(function (blob) { foto = blob; })
+           .catch(function () {});
+      }
+
+      /* Segundo timbrazo: la primera notificación a veces no llega a
+         despertar un celular dormido. */
+      const reintento = cfg().llamada.segundosReintento;
+      if (reintento > 0) {
+        relojReintento = setTimeout(function () {
+          if (estado !== 'llamando') return;
+          Ntfy.publicar(destino.topic, {
+            title: cfg().textos.tituloPush,
+            message: 'Siguen esperando en la puerta — ' + destino.nombre,
+            priority: 5,
+            tags: ['bell'],
+            click: urlPanel,
+            actions: [{ action: 'view', label: 'Atender', url: urlPanel, clear: true }]
+          }).catch(function () {});
+        }, reintento * 1000);
+      }
+
       relojSinRespuesta = setTimeout(function () {
-        if (estado === 'llamando') {
-          desarmar(); ir('sinRespuesta', { destino: destino });
-        }
+        if (estado !== 'llamando') return;
+        const paraEnviar = foto;
+        desarmar();
+        ir('sinRespuesta', { destino: destino, hayFoto: !!paraEnviar });
+        if (paraEnviar) enviarFoto(paraEnviar);
       }, cfg().llamada.segundosSinRespuesta * 1000);
     };
+
+    /* Le manda la cara del que tocó, para que sepas quién pasó. */
+    function enviarFoto(blob) {
+      const d = destino || cfg().destinos[0];
+      let texto = 'Tocaron y no llegaste a atender.';
+      if (ubicacion.estado === 'cerca') {
+        texto += ' Estaba en la puerta (a ' + enPalabras(ubicacion.distancia) + ').';
+      }
+      Ntfy.publicarArchivo(d.topic, blob, {
+        title: '📷 Pasaron por tu casa',
+        message: texto,
+        priority: 4,
+        filename: 'visita.jpg',
+        tags: ['camera']
+      }).then(function () { yo.emitir('fotoEnviada'); })
+        .catch(function (e) { console.warn('no se pudo mandar la foto', e); });
+    }
 
     /* --- controles durante la llamada --- */
     yo.silenciarMicrofono = function (silenciar) {
@@ -242,6 +289,19 @@
     /* --- si no atendieron, dejar constancia --- */
     yo.dejarAviso = async function (texto) {
       const d = destino || cfg().destinos[0];
+      if (foto) {
+        /* si hay foto, el mensaje va con ella y no por separado */
+        await Ntfy.publicarArchivo(d.topic, foto, {
+          title: '📩 Aviso en la puerta',
+          message: texto || cfg().textos.avisoPush,
+          priority: 4,
+          filename: 'visita.jpg',
+          tags: ['envelope']
+        });
+        foto = null;
+        yo.emitir('avisoEnviado', texto);
+        return;
+      }
       await Ntfy.publicar(d.topic, {
         title: '📩 Aviso en la puerta',
         message: texto || cfg().textos.avisoPush,

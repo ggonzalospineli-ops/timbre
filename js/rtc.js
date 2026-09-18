@@ -82,12 +82,56 @@
     });
   }
 
+  /* Saca una foto del stream sin interrumpir la llamada.
+     Devuelve un blob JPEG, o null si no se pudo (sin cámara, permiso
+     revocado, pestaña en segundo plano). Nunca lanza ni se cuelga.  */
+  function capturarFoto(stream, calidad) {
+    return new Promise(function (resolver) {
+      let listo = false;
+      const terminar = function (valor) {
+        if (listo) return;
+        listo = true;
+        try { video.srcObject = null; } catch (_) {}
+        resolver(valor);
+      };
+
+      if (!stream || !stream.getVideoTracks().length) return terminar(null);
+
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      const intento = video.play();
+      if (intento && intento.catch) intento.catch(function () {});
+
+      video.addEventListener('loadeddata', function () {
+        /* un respiro para que el sensor exponga bien: el primer cuadro
+           de una cámara recién abierta suele salir negro */
+        setTimeout(function () {
+          try {
+            const ancho = video.videoWidth, alto = video.videoHeight;
+            if (!ancho || !alto) return terminar(null);
+            const escala = Math.min(1, 640 / Math.max(ancho, alto));
+            const lienzo = document.createElement('canvas');
+            lienzo.width = Math.round(ancho * escala);
+            lienzo.height = Math.round(alto * escala);
+            lienzo.getContext('2d').drawImage(video, 0, 0, lienzo.width, lienzo.height);
+            lienzo.toBlob(function (blob) { terminar(blob); },
+                          'image/jpeg', calidad || 0.7);
+          } catch (_) { terminar(null); }
+        }, 400);
+      }, { once: true });
+
+      setTimeout(function () { terminar(null); }, 5000);
+    });
+  }
+
   function cortarMedios(stream) {
     if (!stream) return;
     stream.getTracks().forEach(function (t) { try { t.stop(); } catch (_) {} });
   }
 
   global.TimbreRTC = {
-    SERVIDORES_ICE, crearConexion, esperarIce, pedirMedios, pedirSoloVideo, cortarMedios
+    SERVIDORES_ICE, crearConexion, esperarIce, pedirMedios, pedirSoloVideo, capturarFoto, cortarMedios
   };
 })(window);

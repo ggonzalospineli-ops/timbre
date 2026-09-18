@@ -91,7 +91,9 @@
     if (e.estado === 'sinRespuesta') {
       /* puede venir con los textos cambiados desde la pantalla de "lejos" */
       $('[data-vista="sinRespuesta"] h1').textContent = 'No atendió nadie.';
-      $('[data-vista="sinRespuesta"] .bajada').textContent = 'Quizás no llegaron a tiempo. Podés avisar que pasaste.';
+      $('[data-vista="sinRespuesta"] .bajada').textContent = e.hayFoto
+        ? 'Les enviamos una foto tuya para que sepan quién pasó. Si querés, dejales también un mensaje.'
+        : 'Quizás no llegaron a tiempo. Podés avisar que pasaste.';
     }
     if (e.estado === 'lejos') {
       const u = e.ubicacion || {};

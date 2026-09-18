@@ -99,6 +99,29 @@ inicio**. Queda como una app y abre al instante.
 
 ---
 
+## Si no llegás a atender
+
+Tres cosas pasan solas, sin que configures nada:
+
+**Segundo timbrazo.** A los 20 segundos, si nadie atendió, sale otra
+notificación. La primera a veces no alcanza para despertar un celular
+dormido. Se cambia con `segundosReintento` en `config.js` (0 lo desactiva).
+
+**Foto del visitante.** Si nadie atiende, te llega la cara de quien tocó
+adjunta a la notificación. Es la diferencia entre "alguien vino" y "ah, era
+el de la entrega". La foto se saca apenas empieza a sonar y solo se manda si
+la llamada no fue atendida. Se desactiva con `fotoSiNoAtienden: false`.
+
+> Al visitante se le avisa en pantalla que, si no atienden, se va a enviar una
+> foto suya. Está puesto a propósito: sacar fotos sin avisar no corresponde.
+> Si desactivás la foto, sacá también ese texto de `index.html`.
+
+**Historial.** El panel muestra los últimos timbrazos de las últimas 24 horas,
+con hora y un enlace a la foto cuando la hay. No guarda nada: lo lee de los
+mensajes que ntfy ya conserva.
+
+---
+
 ## Verificación de ubicación (anti-trolls)
 
 El timbre puede exigir que quien toca **esté realmente en la puerta**. Sirve
@@ -250,6 +273,7 @@ node pruebas/flujo.js       # timbrazo -> atender -> hablar -> colgar
 node pruebas/bordes.js      # rechazo, dos celulares a la vez, aviso, cierre de panel
 node pruebas/camara.js      # girar la cámara sin abrir otro micrófono
 node pruebas/ubicacion.js   # verificación de ubicación y cálculo de distancia
+node pruebas/avisos.js      # segundo timbrazo y foto del visitante
 node pruebas/senales.js     # el SDP entra en el límite de 4 KB de ntfy
 node pruebas/peor-caso.js   # partido en trozos y rearmado desordenado
 ```

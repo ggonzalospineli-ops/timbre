@@ -29,6 +29,40 @@
     return res.json();
   }
 
+  /* ---------- publicar con un archivo adjunto ----------
+     Los datos van en la URL y no en headers: así el navegador no
+     necesita permisos extra de CORS para el preflight.           */
+  async function publicarArchivo(topic, archivo, campos) {
+    const q = new URLSearchParams();
+    const c = campos || {};
+    if (c.title)    q.set('title', c.title);
+    if (c.message)  q.set('message', c.message);
+    if (c.priority) q.set('priority', String(c.priority));
+    if (c.filename) q.set('filename', c.filename);
+    if (c.click)    q.set('click', c.click);
+    if (c.tags)     q.set('tags', c.tags.join(','));
+
+    const res = await fetch(
+      cfg().servidor + '/' + encodeURIComponent(topic) + '?' + q.toString(),
+      { method: 'PUT', body: archivo }
+    );
+    if (!res.ok) throw new Error('ntfy respondió ' + res.status);
+    return res.json();
+  }
+
+  /* ---------- lo que pasó mientras no estabas ----------
+     ntfy guarda los mensajes recientes: alcanza con pedírselos.  */
+  async function historial(topic, desde) {
+    const url = cfg().servidor + '/' + encodeURIComponent(topic) +
+                '/json?poll=1&since=' + encodeURIComponent(desde || '12h');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('ntfy respondió ' + res.status);
+    const texto = await res.text();
+    return texto.split(/\r?\n/).filter(Boolean).map(function (linea) {
+      try { return JSON.parse(linea); } catch (_) { return null; }
+    }).filter(function (m) { return m && m.event === 'message'; });
+  }
+
   /* ---------- escuchar ----------
      `desde` acepta '10m', 'all', o un id de mensaje.
      Se devuelve un objeto con .cerrar(). EventSource reconecta solo;
@@ -165,7 +199,7 @@
   }
 
   global.TimbreNtfy = {
-    uid, publicar, escuchar,
+    uid, publicar, publicarArchivo, historial, escuchar,
     comprimir, descomprimir,
     enviarSenal, avisarAlCerrar, receptorDeSenales
   };

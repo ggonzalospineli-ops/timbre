@@ -43,7 +43,9 @@ window.TIMBRE_CONFIG = {
     videoVisitante: true,   // el visitante se muestra con la cámara frontal
     videoResidente: true,   // vos también te mostrás al atender
     segundosSinRespuesta: 45, // después de esto se ofrece "dejar aviso"
-    segundosMaxLlamada: 300   // corta sola a los 5 min
+    segundosMaxLlamada: 300,  // corta sola a los 5 min
+    segundosReintento: 20,    // segundo timbrazo si nadie atendió (0 = sin reintento)
+    fotoSiNoAtienden: true    // manda una foto del visitante si no llegaste a atender
   },
 
   /* Verificación de ubicación: solo puede tocar el timbre quien

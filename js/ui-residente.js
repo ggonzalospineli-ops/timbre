@@ -46,6 +46,60 @@
   function reproducir() {
     remoto.play().then(() => { $('[data-accion="reproducir"]').hidden = true; }).catch(() => { $('[data-accion="reproducir"]').hidden = false; });
   }
+  /* ---------- lo que pasó mientras no estabas ----------
+     ntfy guarda los mensajes recientes, así que el historial sale
+     gratis: alcanza con pedírselos y ordenarlos. */
+  let ultimaCarga = 0;
+
+  async function cargarHistorial() {
+    const ahora = Date.now();
+    if (ahora - ultimaCarga < 30000) return;   // sin machacar el servidor
+    ultimaCarga = ahora;
+
+    const topics = (window.TIMBRE_CONFIG.destinos || []).map(d => d.topic);
+    let mensajes = [];
+    try {
+      const tandas = await Promise.all(
+        topics.map(tp => TimbreNtfy.historial(tp, '24h').catch(() => []))
+      );
+      tandas.forEach(x => { mensajes = mensajes.concat(x); });
+    } catch (_) { return; }
+
+    mensajes.sort((a, b) => (b.time || 0) - (a.time || 0));
+    mensajes = mensajes.slice(0, 6);
+
+    const caja = $('#historial');
+    if (!caja) return;
+    caja.textContent = '';
+    if (!mensajes.length) { $('#caja-historial').hidden = true; return; }
+
+    mensajes.forEach(function (m) {
+      const linea = document.createElement('p');
+      linea.className = 'nota';
+
+      const cuando = document.createElement('b');
+      cuando.textContent = new Date((m.time || 0) * 1000).toLocaleString('es-AR',
+        { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      linea.appendChild(cuando);
+
+      /* textContent y no innerHTML: esto llega de la red */
+      linea.appendChild(document.createTextNode(' \u00b7 ' + (m.message || m.title || 'Timbrazo')));
+
+      const adj = m.attachment;
+      if (adj && adj.url && adj.url.indexOf('https://') === 0) {
+        linea.appendChild(document.createTextNode(' '));
+        const ver = document.createElement('a');
+        ver.href = adj.url;
+        ver.target = '_blank';
+        ver.rel = 'noopener noreferrer';
+        ver.textContent = 'ver foto';
+        linea.appendChild(ver);
+      }
+      caja.appendChild(linea);
+    });
+    $('#caja-historial').hidden = false;
+  }
+
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-accion]'); if (!b || b.disabled) return;
     const a = b.dataset.accion;
@@ -70,6 +124,7 @@
       $('#estado-grande').textContent = e.estado === 'escuchando' ? 'LISTO PARA ATENDER' : e.estado === 'reconectando' ? 'RECONECTANDO' : 'CONECTANDO';
       $('[data-vista="escuchando"] .bajada').textContent = e.estado === 'escuchando' ? 'Tu timbre está conectado. Te avisamos cuando alguien toque.' : e.estado === 'reconectando' ? 'Se interrumpió la conexión. Estamos intentando volver automáticamente.' : 'Estamos conectando tu timbre.';
       if (e.motivo) $('#ultimo-motivo').textContent = motivos[e.motivo] || '';
+      cargarHistorial();
       local.srcObject = null; remoto.srcObject = null; silenciado = false; camaraApagada = false; controles(); $('[data-accion="reproducir"]').hidden = true;
     }
     if (e.estado === 'error') {

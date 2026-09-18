@@ -81,6 +81,7 @@ timbre.on('streamLocal',  (stream) => { videoPropio.srcObject = stream; });
 timbre.on('streamRemoto', (stream) => { videoDelOtro.srcObject = stream; });
 timbre.on('microfono', (activo) => {});
 timbre.on('avisoEnviado', () => {});
+timbre.on('fotoEnviada', () => {});   // se mandó la foto del visitante
 timbre.on('error', (err) => {});
 ```
 
@@ -93,7 +94,7 @@ timbre.on('error', (err) => {});
 | `permisos` | "Permití cámara y micrófono". Dura 1–3 s. |
 | `llamando` | Llamando. Es el momento más largo (hasta 45 s): merece animación y un botón de cancelar. |
 | `enLlamada` | Video en vivo + controles. |
-| `sinRespuesta` | Nadie atendió. Ofrecer "dejar aviso" y "llamar de nuevo". |
+| `sinRespuesta` | Nadie atendió. Ofrecer "dejar aviso" y "llamar de nuevo". Si `e.hayFoto` es `true`, ya se envió una foto del visitante y conviene decirlo. |
 | `lejos` | No se pudo confirmar que esté en la puerta, así que no puede llamar. `e.ubicacion.estado` dice por qué: `lejos` (con `e.ubicacion.distancia` en metros), `impreciso`, `sinPermiso`, `sinSenal` o `sinSoporte`. Ofrecer reintentar y dejar un mensaje escrito. |
 | `rechazada` | No pueden atender ahora. |
 | `finalizada` | Terminó. `e.motivo`: `cortasteVos`, `cortaronDelOtroLado`, `conexionPerdida`, `tiempo`. |
@@ -169,6 +170,22 @@ Tres cosas a tener en cuenta al diseñar:
   quedar una salida: reintentar, o dejar un mensaje escrito.
 - **El rótulo del encabezado no puede afirmar lo que está en duda.** En `ubicando`
   y `lejos` no corresponde decir "estás en la puerta".
+
+## Foto del visitante
+
+Si nadie atiende, el motor manda una foto del visitante junto al aviso. La
+captura se hace apenas empieza a sonar (con la cámara ya entregando imagen),
+no al final: para entonces los medios ya están cortados.
+
+**La UI tiene que avisarlo.** Sacarle una foto a alguien sin decírselo no
+está bien: el aviso va en la pantalla de `llamando`, antes de que la foto
+exista. Está puesto, no lo saques al rediseñar.
+
+## Historial en el panel
+
+`panel.html` muestra los últimos timbrazos leyendo lo que ntfy ya guarda
+(`TimbreNtfy.historial(topic, '24h')`). Ese contenido **llega de la red**: hay
+que pintarlo con `textContent`, nunca con `innerHTML`.
 
 ## Detalles que la UI tiene que resolver
 
