@@ -56,22 +56,24 @@ suene en varios celulares por separado, agregá destinos.
 
 ### 3. Subilo a GitHub Pages
 
-Desde esta carpeta:
+**Ya está hecho.** El timbre vive en:
+
+### https://ggonzalospineli-ops.github.io/timbre/
+
+Repositorio: https://github.com/ggonzalospineli-ops/timbre
+
+Para publicar cambios, desde esta carpeta:
 
 ```bash
-gh repo create timbre --public --source=. --push
-gh api -X POST repos/:owner/timbre/pages -f "source[branch]=main" -f "source[path]=/"
+git add -A && git commit -m "lo que cambiaste" && git push
 ```
 
-O a mano: creás el repo en github.com, subís los archivos, y en
-**Settings → Pages** elegís la rama `main` y la carpeta `/ (root)`.
-
-En un minuto tenés la página en `https://TUUSUARIO.github.io/timbre/`.
+En un minuto ya están arriba.
 
 ### 4. Probalo antes de gastar en la placa
 
-1. Abrí `https://TUUSUARIO.github.io/timbre/panel.html` en el celular y dejalo abierto.
-2. Abrí `https://TUUSUARIO.github.io/timbre/` en otro dispositivo (o en la compu).
+1. Abrí `https://ggonzalospineli-ops.github.io/timbre/panel.html` en el celular y dejalo abierto.
+2. Abrí `https://ggonzalospineli-ops.github.io/timbre/` en otro dispositivo (o en la compu).
 3. Tocá el timbre. Tiene que sonar la notificación **y** funcionar el video.
 4. Cerrá el panel y volvé a tocar: la notificación tiene que llegar igual, y al
    tocarla tiene que abrirse el panel con la llamada enganchada.
@@ -80,7 +82,7 @@ Recién cuando eso funcione, seguí.
 
 ### 5. El QR y la placa
 
-Abrí `https://TUUSUARIO.github.io/timbre/qr.html`, verificá que la dirección sea
+Abrí `https://ggonzalospineli-ops.github.io/timbre/qr.html`, verificá que la dirección sea
 la correcta y descargá **placa-timbre.svg**. Eso le mandás al que graba.
 
 **La dirección queda grabada para siempre.** El contenido lo podés cambiar
