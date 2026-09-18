@@ -46,7 +46,7 @@
     </div>
 
     <label>
-      <input type="checkbox" id="redondear">
+      <input type="checkbox" id="redondear" checked>
       Redondear las coordenadas (más privacidad, menos precisión)
     </label>
     <p class="nota" id="nota-redondeo"></p>
@@ -178,6 +178,8 @@
       $('#medir').disabled = false;
     }
   }
+
+  refrescar();   /* el redondeo viene activado: que se explique desde el arranque */
 
   $('#medir').addEventListener('click', medir);
   $('#remedir').addEventListener('click', medir);
