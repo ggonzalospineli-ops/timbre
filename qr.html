@@ -47,6 +47,11 @@
     o se ensucie una parte. Para grabado en acero, mandá el SVG tal cual (es vectorial,
     escala a cualquier tamaño). Un QR de 6&nbsp;cm de lado se lee sin problema desde
     unos 40&nbsp;cm.
+    <br><br>
+    <strong>Dos cosas que el grabador tiene que respetar:</strong> el código va
+    <strong>oscuro sobre fondo claro</strong> (invertido, muchos lectores no lo toman),
+    y el <strong>margen blanco que ya viene en el archivo no se recorta</strong>: sin
+    él, el lector no encuentra el código.
   </p>
 
 </main>
@@ -73,16 +78,22 @@
     return m;
   }
 
+  const QUIET = 4;   /* margen libre obligatorio, en módulos */
+
   function svgDelQR(texto, lado, x0, y0, color) {
     const m = matriz(texto);
     const n = m.length;
-    const paso = lado / n;
+    /* El margen entra DENTRO del lado pedido: sin estos 4 módulos en
+       blanco alrededor, muchos lectores no encuentran el código.      */
+    const total = n + QUIET * 2;
+    const paso = lado / total;
     let d = '';
     for (let f = 0; f < n; f++) {
       for (let c = 0; c < n; c++) {
         if (!m[f][c]) continue;
+        const x = x0 + (c + QUIET) * paso, y = y0 + (f + QUIET) * paso;
         /* +0.02 de solape: evita hairlines blancas al rasterizar o cortar */
-        d += 'M' + (x0 + c * paso) + ' ' + (y0 + f * paso) +
+        d += 'M' + x + ' ' + y +
              'h' + (paso + 0.02) + 'v' + (paso + 0.02) + 'h' + (-paso - 0.02) + 'Z';
       }
     }
