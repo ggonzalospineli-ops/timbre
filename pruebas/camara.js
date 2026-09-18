@@ -93,70 +93,58 @@ function crearVentana(nombre) {
   return v;
 }
 
-/* ---------- la prueba ---------- */
+
+/* ---------- girar la cámara no debe abrir otro micrófono ---------- */
 (async () => {
-  const vVisitante = crearVentana('visitante');
-  const vResidente = crearVentana('residente');
+  const v = crearVentana('visitante');
 
-  const visitante = vVisitante.Timbre.visitante();
-  const residente = vResidente.Timbre.residente();
+  const pedidos = [];
+  const pistasVivas = [];
+  v.navigator.mediaDevices.getUserMedia = async (c) => {
+    pedidos.push(c);
+    const ps = [];
+    if (c.audio) ps.push({ kind: 'audio', enabled: true, vivo: true, stop() { this.vivo = false; } });
+    if (c.video) ps.push({ kind: 'video', enabled: true, vivo: true, stop() { this.vivo = false; } });
+    ps.forEach(p => pistasVivas.push(p));
+    return { getTracks: () => ps, getAudioTracks: () => ps.filter(p => p.kind === 'audio'),
+             getVideoTracks: () => ps.filter(p => p.kind === 'video'),
+             addTrack(p) { ps.push(p); }, removeTrack(p) { const i = ps.indexOf(p); if (i >= 0) ps.splice(i, 1); } };
+  };
 
-  const estadosV = [], estadosR = [];
-  visitante.on('estado', e => estadosV.push(e.estado));
-  residente.on('estado', e => estadosR.push(e.estado));
-
-  let streamRemotoV = false, streamRemotoR = false, entranteVisto = null;
-  visitante.on('streamRemoto', () => { streamRemotoV = true; });
-  residente.on('streamRemoto', () => { streamRemotoR = true; });
-  residente.on('entrante', ll => { entranteVisto = ll; });
-
-  residente.escuchar({ llamadaId: null, destinoId: 'casa' });
-  await esperar(50);
+  const visitante = v.Timbre.visitante();
+  const resultados = [];
 
   await visitante.tocar('casa');
-  await esperar(150);
-
-  const huboPush = publicados.some(p => p.topic === 'ring' && p.cuerpo.priority === 5);
-  const clickAlPanel = publicados.find(p => p.topic === 'ring');
-
-  if (!entranteVisto) return fallar('el residente nunca vio la llamada entrante');
-
-  await residente.atender({ video: true });
-  await esperar(150);
-
-  /* ---------- verificaciones ---------- */
-  const checks = [
-    ['el residente queda escuchando', estadosR.includes('escuchando')],
-    ['sale la notificación con prioridad urgente', huboPush],
-    ['la notificación abre el panel con el id de llamada', !!clickAlPanel && /panel\.html\?c=\w+&d=casa/.test(clickAlPanel.cuerpo.click)],
-    ['la notificación trae botón Atender', !!clickAlPanel && clickAlPanel.cuerpo.actions[0].label === 'Atender'],
-    ['el residente detecta la llamada entrante', !!entranteVisto && !!entranteVisto.sdp],
-    ['al residente le llega el SDP correcto del visitante', !!entranteVisto && entranteVisto.sdp.includes('SDP-OFERTA-DE-visitante')],
-    ['el residente pasa a enLlamada', estadosR.includes('enLlamada')],
-    ['el visitante pasa a enLlamada', estadosV.includes('enLlamada')],
-    ['el visitante recibe video del residente', streamRemotoV],
-    ['el residente recibe video del visitante', streamRemotoR],
-    ['el timbrazo no viajó por el topic de señalización', !publicados.some(p => p.topic === 'sig' && p.cuerpo.priority === 5)],
-    ['las señales van con prioridad mínima', publicados.filter(p => p.topic === 'sig').every(p => p.cuerpo.priority === 1)]
-  ];
-
-  /* colgar */
-  residente.colgar();
   await esperar(120);
-  checks.push(['al colgar el residente, el visitante se entera', estadosV[estadosV.length - 1] === 'finalizada']);
-  checks.push(['el residente vuelve a escuchar', estadosR[estadosR.length - 1] === 'escuchando']);
+  resultados.push(['la llamada arranca pidiendo micrófono y cámara', pedidos.length === 1 && !!pedidos[0].audio && !!pedidos[0].video]);
+
+  const camaraNueva = await visitante.cambiarCamara();
+  await esperar(50);
+
+  resultados.push(['girar la cámara pide medios de nuevo', pedidos.length === 2]);
+  resultados.push(['pero SIN audio (no abre otro micrófono)', pedidos[1].audio === false]);
+  resultados.push(['y pide la cámara trasera', pedidos[1].video.facingMode === 'environment' && camaraNueva === 'environment']);
+
+  const micsVivos = pistasVivas.filter(p => p.kind === 'audio' && p.vivo).length;
+  const camsVivas = pistasVivas.filter(p => p.kind === 'video' && p.vivo).length;
+  resultados.push(['queda un solo micrófono abierto', micsVivos === 1]);
+  resultados.push(['queda una sola cámara abierta', camsVivas === 1]);
+
+  /* si no hay segunda cámara, el estado no queda invertido */
+  v.navigator.mediaDevices.getUserMedia = async () => { throw new Error('OverconstrainedError'); };
+  let tiro = false;
+  try { await visitante.cambiarCamara(); } catch (_) { tiro = true; }
+  resultados.push(['si no hay otra cámara, avisa el error', tiro]);
+  const vuelta = pedidos.length;
+  visitante.colgar();
+  await esperar(50);
+  const todosCortados = pistasVivas.every(p => !p.vivo);
+  resultados.push(['al colgar se cierran cámara y micrófono', todosCortados]);
 
   let malos = 0;
-  for (const [nombre, ok] of checks) {
-    console.log((ok ? '  OK   ' : '  FALLA') + '  ' + nombre);
-    if (!ok) malos++;
-  }
-  console.log('\nvisitante: ' + estadosV.join(' -> '));
-  console.log('residente: ' + estadosR.join(' -> '));
-  console.log('\n' + (malos ? malos + ' FALLO(S)' : 'TODO OK — ' + checks.length + ' verificaciones'));
+  for (const [n, ok] of resultados) { console.log((ok ? '  OK   ' : '  FALLA') + '  ' + n); if (!ok) malos++; }
+  console.log('\n' + (malos ? malos + ' FALLO(S)' : 'TODO OK — ' + resultados.length + ' verificaciones'));
   process.exit(malos ? 1 : 0);
-
-  function fallar(m) { console.log('FALLA: ' + m); process.exit(1); }
 })();
 
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }

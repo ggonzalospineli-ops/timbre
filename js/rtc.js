@@ -72,12 +72,22 @@
     });
   }
 
+  /* Solo la cámara, sin tocar el micrófono. Se usa al girar la cámara
+     durante una llamada: pedir audio de nuevo abriría un segundo
+     micrófono que quedaría vivo y sin usar.                        */
+  function pedirSoloVideo(camara) {
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: camara || 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+  }
+
   function cortarMedios(stream) {
     if (!stream) return;
     stream.getTracks().forEach(function (t) { try { t.stop(); } catch (_) {} });
   }
 
   global.TimbreRTC = {
-    SERVIDORES_ICE, crearConexion, esperarIce, pedirMedios, cortarMedios
+    SERVIDORES_ICE, crearConexion, esperarIce, pedirMedios, pedirSoloVideo, cortarMedios
   };
 })(window);

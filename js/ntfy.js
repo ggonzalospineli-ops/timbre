@@ -117,6 +117,25 @@
     }
   }
 
+  /* Aviso de corte cuando se está cerrando la página: un fetch normal
+     se cancela al descargarse el documento, sendBeacon no.          */
+  function avisarAlCerrar(sobre) {
+    const cuerpo = JSON.stringify({
+      topic: cfg().topicSenales,
+      message: JSON.stringify({
+        t: sobre.tipo, c: sobre.llamada, s: sobre.sesion || null,
+        p: 1, n: 1, d: ''
+      }),
+      priority: 1
+    });
+    try {
+      if (navigator.sendBeacon) {
+        return navigator.sendBeacon(cfg().servidor + '/', cuerpo);
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /* Rearma los mensajes partidos. Devuelve una función que se le pasa
      a `escuchar` y que llama a `alCompletar(tipo, llamada, texto)`.   */
   function receptorDeSenales(alCompletar) {
@@ -148,6 +167,6 @@
   global.TimbreNtfy = {
     uid, publicar, escuchar,
     comprimir, descomprimir,
-    enviarSenal, receptorDeSenales
+    enviarSenal, avisarAlCerrar, receptorDeSenales
   };
 })(window);

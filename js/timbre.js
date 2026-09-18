@@ -177,8 +177,16 @@
 
     yo.cambiarCamara = async function () {
       if (!local || !pc) return;
+      const anterior = camara;
       camara = (camara === 'user') ? 'environment' : 'user';
-      const nuevo = await RTC.pedirMedios({ video: true, camara: camara });
+      let nuevo;
+      try {
+        /* solo video: el micrófono que ya está abierto se sigue usando */
+        nuevo = await RTC.pedirSoloVideo(camara);
+      } catch (e) {
+        camara = anterior;   // no hay segunda cámara: queda como estaba
+        throw e;
+      }
       const pista = nuevo.getVideoTracks()[0];
       const emisor = pc.getSenders().find(function (s) {
         return s.track && s.track.kind === 'video';
@@ -376,7 +384,14 @@
       ir('escuchando', { motivo: motivo || 'cortasteVos' });
     };
 
+    /* Se llama al cerrar la pestaña: hay que avisarle al visitante que
+       no espere más, y tiene que salir antes de que muera la página. */
     yo.detener = function () {
+      const id = entrante && entrante.id;
+      if (id && (estado === 'enLlamada' || estado === 'entrante')) {
+        cerradas.add(id);
+        Ntfy.avisarAlCerrar({ tipo: 'bye', llamada: id, sesion: sesion });
+      }
       if (canal) { canal.cerrar(); canal = null; }
       desarmarLlamada();
       ir('inicio');

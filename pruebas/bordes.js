@@ -68,7 +68,8 @@ function crearVentana(nombre) {
     console, setTimeout, clearTimeout, setInterval, clearInterval, Set, Map, URL, URLSearchParams,
     Date, Promise, JSON, Object, Array, Error,
     RTCPeerConnection: hacerRTCPeerConnection(nombre),
-    navigator: { mediaDevices: { getUserMedia: async () => stream() } },
+    navigator: { mediaDevices: { getUserMedia: async () => stream() },
+      sendBeacon: (url, cuerpo) => { const c = JSON.parse(cuerpo); publicarEnBus(c.topic, c); return true; } },
     location: { href: 'https://ejemplo.github.io/timbre/index.html' },
     fetch: async (url, o) => {
       const cuerpo = JSON.parse(o.body);
@@ -148,6 +149,23 @@ function crearVentana(nombre) {
     resultados.push(['el aviso sale por el topic del destino', aviso.topic === 'ring']);
     resultados.push(['con el texto que escribió el visitante', aviso.cuerpo.message === 'Te dejé un paquete']);
     resultados.push(['sin prioridad de llamada', aviso.cuerpo.priority === 4]);
+  }
+
+  /* --- 4. cierran el panel en plena llamada --- */
+  {
+    const vV = crearVentana('v4'), vR = crearVentana('r4');
+    const visitante = vV.Timbre.visitante(), residente = vR.Timbre.residente();
+    residente.escuchar({ destinoId: 'casa' });
+    await esperar(40);
+    await visitante.tocar('casa');
+    await esperar(150);
+    await residente.atender({ video: true });
+    await esperar(150);
+    const hablando = visitante.estado === 'enLlamada';
+    residente.detener();                 // esto es lo que pasa al cerrar la pestaña
+    await esperar(150);
+    resultados.push(['estaban hablando', hablando]);
+    resultados.push(['al cerrarse el panel, el visitante se entera', visitante.estado === 'finalizada']);
   }
 
   let malos = 0;

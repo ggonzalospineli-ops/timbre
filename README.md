@@ -194,7 +194,8 @@ La lógica está cubierta por pruebas que corren sin navegador ni servidor
 
 ```bash
 node pruebas/flujo.js       # timbrazo -> atender -> hablar -> colgar
-node pruebas/bordes.js      # rechazo, dos celulares a la vez, dejar aviso
+node pruebas/bordes.js      # rechazo, dos celulares a la vez, aviso, cierre de panel
+node pruebas/camara.js      # girar la cámara sin abrir otro micrófono
 node pruebas/senales.js     # el SDP entra en el límite de 4 KB de ntfy
 node pruebas/peor-caso.js   # partido en trozos y rearmado desordenado
 ```
